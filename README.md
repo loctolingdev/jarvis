@@ -85,3 +85,19 @@ Say **“Jarvis …”** followed by your sentence. Examples:
 The welcome sentence now uses the local Windows voice automatically when ElevenLabs is missing or fails, so it is no longer silently skipped.
 
 Voice settings are near the top of `jarvis.py`: `VOICE_CONTROL_ENABLED`, `VOICE_WAKE_WORD`, `VOICE_LANGUAGE`, and `VOICE_MIN_CONFIDENCE`.
+
+## Build standalone Windows EXE
+
+From Windows (or via GitHub Actions on `windows-latest`):
+
+```bat
+build_windows.bat
+```
+
+This runs PyInstaller with `Jarvis.spec` and produces `dist\Jarvis.exe` (one-file, no Python required on the target machine).
+
+### New in this version
+
+- Interactive zoom on the HUD interface: mouse wheel, `+`/`-` keys, `0` to reset.
+- Standalone-friendly paths: `.env`, `voice_profile.wav`, cache and UI state are resolved next to the executable.
+- Jarvis UI is launched in a separate process even when frozen.

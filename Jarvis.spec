@@ -12,7 +12,6 @@ a = Analysis(
         ('jarvis_ui.py', '.'),
         ('assets', 'assets'),
         ('voice_profile.wav', '.'),
-        ('.env', '.'),
         ('.env.example', '.'),
     ],
     hiddenimports=[

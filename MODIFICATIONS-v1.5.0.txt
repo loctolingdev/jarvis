@@ -1,0 +1,7 @@
+Jarvis Voice v1.5.0 — STANDALONE EXE + ZOOM
+
+- Préparation pour un exécutable Windows autonome (.exe) via PyInstaller (Jarvis.spec, build_windows.bat, workflow GitHub Actions).
+- Chemins adaptés au mode gelé (frozen) : .env, voice_profile.wav, cache et état UI à côté de l'exécutable ; assets depuis _MEIPASS.
+- Lancement de l'interface Jarvis dans un processus séparé même en mode gelé (multiprocessing.freeze_support).
+- Fonctionnalité de zoom sur l'interface HUD : molette de souris, touches + / -, touche 0 pour réinitialiser.
+- Zoom appliqué à l'ensemble de la scène (canvas.scale) avec indicateur en bas d'écran.
