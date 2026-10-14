@@ -1,0 +1,7 @@
+Jarvis Voice v1.4.7
+
+- Fond spatial exact intégré et utilisé par l’interface.
+- Spotify et le cours Tencent sont maintenant maximisés après le démarrage.
+- Le CMD de Jarvis reste minimisé.
+- Commandes Spotify ajoutées : « change la musique », « musique suivante », « musique précédente », « mets [titre] sur Spotify », « joue [artiste] sur Spotify ».
+- Les recherches Google restent actives.

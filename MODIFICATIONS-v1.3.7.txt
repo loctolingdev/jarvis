@@ -1,0 +1,6 @@
+JARVIS VOICE v1.3.7
+
+- Ecoute vocale continue apres l activation par deux claquements.
+- L ecoute reste active apres chaque commande, erreur de reconnaissance ou silence.
+- Elle s arrete uniquement avec STOP, Ctrl+C ou la fermeture du programme.
+- Fenetre d ecoute portee a 7 secondes pour mieux capter les phrases longues.

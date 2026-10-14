@@ -1,0 +1,9 @@
+JARVIS VOICE v1.4.1 — MODE LIEN HTTPS
+
+- Dire « HTTPS » active le mode lien.
+- Jarvis demande ensuite de dicter l’adresse, par exemple « github point com ».
+- Il reconstruit https://github.com, l’écrit dans la barre d’adresse Google/Chrome et valide.
+- On peut aussi tout dire en une phrase : « HTTPS github point com ».
+- « Annule » ou « quitte le mode lien » désactive le mode sans ouvrir de page.
+- Les adresses locales et non valides sont refusées.
+- L’écoute continue et toutes les commandes v1.4.0 sont conservées.

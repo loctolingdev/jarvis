@@ -1,0 +1,10 @@
+JARVIS VOICE v1.3.6
+
+- ElevenLabs reste le moteur vocal prioritaire.
+- Basculement automatique vers Microsoft Edge TTS si ElevenLabs renvoie une erreur,
+  refuse la voix, ou si le quota de credits est epuise.
+- Edge TTS utilise par defaut fr-FR-HenriNeural avec une hauteur plus grave et un debit ralenti.
+- Si Edge TTS est lui aussi indisponible, Jarvis utilise la voix Windows hors ligne.
+
+Important : Edge TTS ne peut pas reproduire exactement une voix ElevenLabs proprietaire.
+Les reglages fournis cherchent seulement a produire une voix masculine, grave et robotique proche dans l intention.

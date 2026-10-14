@@ -1,0 +1,7 @@
+Jarvis Voice v1.3.5
+- Toutes les phrases de Jarvis utilisent ELEVENLABS_VOICE_ID=lP5eSS8AWZEqXtJFmq4G quand l'API autorise cette voix.
+- Recherche Google vocale libre: « cherche ... sur Google ».
+- Ouverture de sites: « ouvre YouTube », « va sur github.com », « rends-toi sur Wikipédia ».
+- Jarvis suit les fenêtres Chrome qu'il ouvre.
+- « stop » ferme Spotify, les fenêtres suivies, Jarvis et son invite de commandes.
+- Les autres fenêtres Chrome de l'utilisateur ne sont pas volontairement fermées.

@@ -1,0 +1,8 @@
+Jarvis v1.2.1 corrections
+
+- Spotify is left open and continues playing.
+- Added continuous Windows voice recognition.
+- Jarvis now reacts to sentences beginning with "Jarvis".
+- Added Spotify media commands: pause, resume, previous and next.
+- Added an offline Windows voice fallback when ElevenLabs is missing or fails.
+- The welcome phrase is no longer silently skipped.

@@ -1,0 +1,8 @@
+JARVIS VOICE v1.3.3 - VOIX ROBOTIQUE ET MODE SECURISE
+
+- Voix ElevenLabs : lP5eSS8AWZEqXtJFmq4G.
+- Blocage des demandes visant mots de passe, fichiers, emails, contacts, historique, cookies, presse-papiers, comptes ou cles.
+- OpenRouter recoit uniquement la phrase prononcee, sans fichier ni contexte prive du PC.
+- Gmail, Drive et Agenda retires des ouvertures directes.
+- Aucun lancement de Claude, Cursor ou commande systeme.
+- Recherches Google publiques, Spotify, Tencent et reponses vocales conserves.

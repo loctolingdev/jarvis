@@ -1,0 +1,10 @@
+Jarvis Voice v1.3.1 - correction microphone
+
+- Le détecteur de claquements libère maintenant le microphone après l'activation.
+- La reconnaissance vocale démarre seulement après les deux claquements.
+- Microphone forcé sur la webcam Logitech C270 lorsque disponible.
+- Identifiant de voix ElevenLabs ajouté : tVu7uvtKsrCoOPPIUVR7.
+- Tencent Holdings 0700:HKG remplace définitivement Binance.
+- Tencent s'ouvre sur l'écran 1 pour éviter les avertissements d'écran 3 absent.
+- Reconnaissance française avec repli vers la langue Windows disponible.
+- Seuil de confiance vocal réduit pour améliorer la détection.

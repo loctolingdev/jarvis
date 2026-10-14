@@ -1,0 +1,14 @@
+numpy>=1.24,<3
+sounddevice>=0.4.6,<0.6
+elevenlabs>=1.50,<3
+websockets>=13
+python-dotenv>=1.0,<2
+
+SpeechRecognition>=3.10,<4
+edge-tts>=7.0,<8
+
+pyautogui>=0.9.54,<1
+pyperclip>=1.9,<2
+pycaw>=20240210
+
+Pillow>=10,<12

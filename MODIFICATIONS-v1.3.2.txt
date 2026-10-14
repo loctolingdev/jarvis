@@ -1,0 +1,5 @@
+Jarvis Voice v1.3.2
+- Reconnaissance Windows System.Speech remplacee par Google Speech Recognition fr-FR.
+- Le mot Jarvis devient facultatif pour cherche/recherche/ouvre et commandes musique.
+- Selection automatique d une voix Windows francaise si ElevenLabs refuse la voix de bibliotheque.
+- Microphone Logitech conserve via JARVIS_INPUT_DEVICE.

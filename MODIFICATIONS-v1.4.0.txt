@@ -1,0 +1,11 @@
+JARVIS VOICE v1.4.0
+
+Nouvelles commandes :
+- « Ouvre Minecraft Launcher »
+- « Lance le lanceur Minecraft »
+- « Ouvre Netflix »
+- « Lance Netflix »
+
+Minecraft Launcher est recherché dans les emplacements Windows habituels, puis via le protocole minecraft://.
+Netflix tente d'abord d'ouvrir l'application Windows installée, puis utilise netflix.com dans Chrome en solution de secours.
+Toutes les autres fonctions de la v1.3.9 restent présentes.

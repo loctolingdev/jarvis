@@ -1,0 +1,11 @@
+JARVIS VOICE v1.3.9 — COMMANDES WINDOWS ET NAVIGATION
+
+- Volume : monter, baisser, couper le son et régler un pourcentage précis.
+- Applications : ouvrir Discord, fermer Chrome, lancer Minecraft et ouvrir Téléchargements.
+- Pages web : lire la page active, la résumer ou extraire les informations importantes.
+- Traduction vocale libre via OpenRouter.
+- Google : ouvrir les résultats 1 à 5, revenir en arrière, défiler et afficher les vidéos.
+- Recherches ciblées : GitHub, Google Images, YouTube et Amazon.
+- Écoute continue et système vocal ElevenLabs → Edge TTS → Windows conservés.
+
+Note : la lecture/résumé d'une page utilise le contenu sélectionnable de la fenêtre active.

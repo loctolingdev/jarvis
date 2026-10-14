@@ -1,0 +1,16 @@
+Jarvis Voice v1.3.0 - loctoling
+
+- Activation principale après deux claquements de mains.
+- Dit « Salut loctoling » au démarrage.
+- Spotify reste ouvert et continue la musique.
+- Binance supprimé.
+- Ouvre le cours Tencent Holdings Limited (0700:HKG) dans Google Finance.
+- Claude et Cursor désactivés.
+- OpenRouter gratuit utilisé avec le modèle openrouter/free.
+- Commandes Google :
+  - « Jarvis, cherche Minecraft sur Google »
+  - « Jarvis, ouvre YouTube »
+  - « Jarvis, ouvre Gmail »
+  - « Jarvis, ouvre Google Maps »
+  - « Jarvis, ouvre le cours de Tencent »
+- Les autres questions sont envoyées à OpenRouter puis lues à voix haute.

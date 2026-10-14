@@ -1,0 +1,6 @@
+Jarvis Voice v1.4.9
+
+- Spotify : recherche d'abord dans l'application installée, sinon recherche Google.
+- Netflix : ouvre/recherche d'abord dans l'application, sinon recherche Google.
+- "Lance Minecraft Java" : ouvre en priorité Minecraft Launcher.
+- "Lance Minecraft Bedrock" : ouvre en priorité l'application Minecraft pour Windows.

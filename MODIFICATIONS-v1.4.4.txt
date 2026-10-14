@@ -1,0 +1,8 @@
+Jarvis Voice v1.4.4
+
+- Le fond de l'interface utilise maintenant la nouvelle image de circuits bleus.
+- Quand tu as dit "petit", les fenêtres sont maintenant minimisées avec le bouton "-" au lieu d'être simplement redimensionnées.
+- La fenêtre CMD se minimise dès le démarrage.
+- Spotify et la fenêtre Tencent se minimisent automatiquement après ouverture.
+- Reconnaissance vocale de la voix assouplie : seuil réduit et profil vocal recréé avec un échantillon plus long.
+- Si l'échantillon vocal reste trop court, Jarvis assouplit temporairement le verrou vocal au lieu de bloquer complètement la commande.

@@ -1,0 +1,7 @@
+JARVIS VOICE v1.3.4
+
+- Accès local au presse-papiers uniquement après une demande vocale explicite.
+- Le contenu du presse-papiers n'est ni journalisé ni envoyé à OpenRouter.
+- Commandes prises en charge : « Jarvis, lis le presse-papiers » ou « Quel est le contenu du presse-papiers ? ».
+- La commande exacte « stop » (ainsi que « arrête Jarvis » ou « quitte ») ferme entièrement le programme.
+- Les autres protections sur les fichiers, mots de passe, emails, historique, cookies et comptes restent actives.

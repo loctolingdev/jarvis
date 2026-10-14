@@ -1,0 +1,6 @@
+Jarvis Voice v1.4.6
+
+- Fond de l'interface remplacé par la nouvelle image spatiale fournie.
+- Les commandes de recherche Google restent actives et corrigées.
+- La phrase "D'accord, c'est en cours d'exécution." ne se déclenche qu'une seule fois par commande.
+- Reconnaissance de la voix plus permissive : seuil du verrou vocal abaissé.

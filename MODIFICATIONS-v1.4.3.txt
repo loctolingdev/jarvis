@@ -1,0 +1,11 @@
+Jarvis Voice v1.4.3
+
+Ajouts / corrections :
+- Interface vocale fortement améliorée pour ressembler au visuel futuriste fourni : grand halo bleu, cercles tactiques, panneaux HUD, historique des commandes.
+- Le halo réagit au niveau réel du micro.
+- Réponse plus rapide : détection de fin de phrase plus courte, avec accusé vocal "D'accord, c'est en cours d'exécution." pour les commandes longues.
+- Le profil vocal est préchargé à partir du nouvel échantillon fourni (voice_profile.wav).
+- Tolérance du verrou vocal ajustée pour accepter l'échantillon court tout en restant locale.
+- Dès le lancement, la fenêtre CMD se réduit en petite fenêtre.
+- Spotify et la fenêtre Tencent s'ouvrent en petite fenêtre.
+- Tencent ne s'ouvre plus en plein écran, mais dans une petite fenêtre Chrome.

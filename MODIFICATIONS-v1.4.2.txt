@@ -1,0 +1,8 @@
+JARVIS v1.4.2 — INTERFACE ET VERROU VOCAL
+- Interface futuriste basée sur l'image fournie.
+- Halo réactif au niveau du microphone.
+- Affichage des commandes exécutées et de l'état de Jarvis.
+- Vérification locale de l'empreinte spectrale de la voix avant reconnaissance.
+- ENREGISTRER-MA-VOIX.bat crée un profil vocal local de 8 secondes.
+- Le profil vocal n'est jamais envoyé à OpenRouter, Google ou ElevenLabs.
+ATTENTION : ce filtre réduit les activations par une autre voix, mais ne remplace pas une authentification biométrique professionnelle et peut être trompé par un enregistrement.

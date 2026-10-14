@@ -1,0 +1,7 @@
+JARVIS VOICE v1.3.8 — INTERACTION AVEC GOOGLE
+
+- Les commandes « cherche ... sur Google » ouvrent Google puis saisissent visiblement la requête dans la barre.
+- Validation automatique avec Entrée.
+- Compatible avec les accents et caractères français.
+- Si l'automatisation de la fenêtre échoue, Jarvis utilise automatiquement l'URL de recherche directe.
+- L'écoute continue et toutes les fonctions v1.3.7 sont conservées.
