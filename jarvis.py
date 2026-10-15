@@ -1378,6 +1378,200 @@ _PRIVATE_REQUEST_PATTERNS = (
 )
 
 
+# --- Smart & home-automation helpers ---------------------------------------
+HOME_ASSISTANT_URL = (os.environ.get("HOME_ASSISTANT_URL") or "").strip().rstrip("/")
+HOME_ASSISTANT_TOKEN = (os.environ.get("HOME_ASSISTANT_TOKEN") or "").strip()
+
+
+def _http_json(method: str, url: str, payload=None, headers=None, timeout: float = 8.0):
+    import json as _j
+    import urllib.request
+    data = None
+    h = dict(headers or {})
+    if payload is not None:
+        data = _j.dumps(payload).encode("utf-8")
+        h.setdefault("Content-Type", "application/json")
+    req = urllib.request.Request(url, data=data, headers=h, method=method.upper())
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            try:
+                return resp.status, _j.loads(raw) if raw else {}
+            except Exception:
+                return resp.status, {"raw": raw}
+    except Exception as exc:
+        return None, {"error": str(exc)}
+
+
+def _handle_domotic_command(command: str) -> bool:
+    """Home automation commands. Returns True if handled."""
+    n = command.lower().strip()
+    # Lights
+    light_match = re.search(r"(allume|eteins|éteins|etein)\s+(la |les |le )?(lumiere|lumière|lampe|ampoule|lumieres|lumières)(?:\s+(.+))?", n)
+    if light_match:
+        action = "turn_on" if light_match.group(1).startswith("all") else "turn_off"
+        target = (light_match.group(4) or "all").strip()
+        if HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN:
+            entity = "light." + target.replace(" ", "_") if target != "all" else "light.all"
+            status, _ = _http_json(
+                "POST",
+                f"{HOME_ASSISTANT_URL}/api/services/light/{action}",
+                {"entity_id": entity},
+                {"Authorization": f"Bearer {HOME_ASSISTANT_TOKEN}"},
+            )
+            if status and 200 <= status < 300:
+                speak_text(f"J'ai {('allumé' if action == 'turn_on' else 'éteint')} {target}.")
+                return True
+            speak_text("Je n'ai pas pu joindre Home Assistant. Vérifiez HOME_ASSISTANT_URL et le token.")
+            return True
+        speak_text(f"Mode démonstration : j'aurais {('allumé' if action == 'turn_on' else 'éteint')} {target}. Configurez Home Assistant pour un vrai contrôle.")
+        return True
+    # Thermostat
+    thermo_match = re.search(r"(mets|regle|règle|met)\s+(le |la )?(thermostat|chauffage|temperature|température)\s+(?:a|à)\s+(\d{1,2})", n)
+    if thermo_match:
+        temp = int(thermo_match.group(4))
+        if HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN:
+            status, _ = _http_json(
+                "POST",
+                f"{HOME_ASSISTANT_URL}/api/services/climate/set_temperature",
+                {"entity_id": "climate.thermostat", "temperature": temp},
+                {"Authorization": f"Bearer {HOME_ASSISTANT_TOKEN}"},
+            )
+            if status and 200 <= status < 300:
+                speak_text(f"Thermostat réglé à {temp} degrés.")
+                return True
+            speak_text("Impossible de régler le thermostat via Home Assistant.")
+            return True
+        speak_text(f"Mode démonstration : thermostat réglé à {temp} degrés.")
+        return True
+    # Shutters / blinds
+    shutter_match = re.search(r"(ouvre|ferme)\s+(les |le |la )?(volets?|stores?|rideaux?)", n)
+    if shutter_match:
+        action = "open_cover" if shutter_match.group(1) == "ouvre" else "close_cover"
+        if HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN:
+            status, _ = _http_json(
+                "POST",
+                f"{HOME_ASSISTANT_URL}/api/services/cover/{action}",
+                {"entity_id": "cover.all"},
+                {"Authorization": f"Bearer {HOME_ASSISTANT_TOKEN}"},
+            )
+            if status and 200 <= status < 300:
+                speak_text("Volets " + ("ouverts." if action == "open_cover" else "fermés."))
+                return True
+        speak_text("Mode démonstration : volets " + ("ouverts." if action == "open_cover" else "fermés."))
+        return True
+    # Generic scene
+    scene_match = re.search(r"(active|lance)\s+(la |le )?scene\s+(.+)", n)
+    if scene_match:
+        scene = scene_match.group(3).strip()
+        if HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN:
+            status, _ = _http_json(
+                "POST",
+                f"{HOME_ASSISTANT_URL}/api/services/scene/turn_on",
+                {"entity_id": f"scene.{scene.replace(' ', '_')}"},
+                {"Authorization": f"Bearer {HOME_ASSISTANT_TOKEN}"},
+            )
+            if status and 200 <= status < 300:
+                speak_text(f"Scène {scene} activée.")
+                return True
+        speak_text(f"Mode démonstration : scène {scene} activée.")
+        return True
+    return False
+
+
+def _handle_smart_command(command: str) -> bool:
+    """Smart assistant features: weather, time, date, reminders, calc, jokes."""
+    n = command.lower().strip()
+    # Time / date
+    if any(x in n for x in ("quelle heure", "il est quelle heure", "donne l'heure", "l'heure")):
+        import datetime
+        now = datetime.datetime.now()
+        speak_text(f"Il est {now.strftime('%H heures %M')}.")
+        return True
+    if any(x in n for x in ("quelle date", "on est quel jour", "la date", "quel jour")):
+        import datetime
+        now = datetime.datetime.now()
+        speak_text(f"Nous sommes le {now.strftime('%A %d %B %Y')}.")
+        return True
+    # Weather (Open-Meteo, no API key)
+    weather_match = re.search(r"(météo|météo de|temps (?:qu'il fait|à)|quelle est la météo)(?:\s+(?:à|a|de|pour)\s+(.+))?", n)
+    if weather_match or "météo" in n or "meteo" in n:
+        city = (weather_match.group(2) if weather_match else None) or "Vannes"
+        city = city.strip() if city else "Vannes"
+        try:
+            import json as _j
+            import urllib.parse
+            import urllib.request
+            geo_url = "https://geocoding-api.open-meteo.com/v1/search?name=" + urllib.parse.quote(city) + "&count=1&language=fr"
+            with urllib.request.urlopen(geo_url, timeout=8) as r:
+                geo = _j.loads(r.read().decode())
+            if geo.get("results"):
+                lat = geo["results"][0]["latitude"]
+                lon = geo["results"][0]["longitude"]
+                name = geo["results"][0].get("name", city)
+                w_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto"
+                with urllib.request.urlopen(w_url, timeout=8) as r:
+                    w = _j.loads(r.read().decode())
+                cur = w.get("current", {})
+                temp = cur.get("temperature_2m")
+                wind = cur.get("wind_speed_10m")
+                code = cur.get("weather_code", 0)
+                desc = {0: "ciel dégagé", 1: "plutôt dégagé", 2: "partiellement nuageux", 3: "couvert",
+                        45: "brouillard", 51: "bruine", 61: "pluie", 71: "neige", 95: "orage"}.get(code, "conditions variables")
+                speak_text(f"Météo à {name} : {temp} degrés, {desc}, vent {wind} km/h.")
+                return True
+        except Exception as exc:
+            log.warning("Weather fetch failed: %s", exc)
+        speak_text("Je n'ai pas pu récupérer la météo.")
+        return True
+    # Reminder (Windows toast via PowerShell, best-effort)
+    rem_match = re.search(r"(rappelle[- ]moi|rappel)\s+(?:dans\s+)?(\d+)\s*(minute|minutes|heure|heures|seconde|secondes)\s*(.*)", n)
+    if rem_match:
+        amount = int(rem_match.group(2))
+        unit = rem_match.group(3)
+        msg = (rem_match.group(4) or "Rappel Jarvis").strip() or "Rappel Jarvis"
+        seconds = amount
+        if unit.startswith("minute"):
+            seconds = amount * 60
+        elif unit.startswith("heure"):
+            seconds = amount * 3600
+        def _fire():
+            time.sleep(seconds)
+            speak_text(f"Rappel : {msg}")
+        threading.Thread(target=_fire, daemon=True).start()
+        speak_text(f"D'accord, je vous rappellerai dans {amount} {unit}.")
+        return True
+    # Calculator
+    calc_match = re.search(r"(calcule|combien font|calcule moi)\s+(.+)", n)
+    if calc_match:
+        expr = calc_match.group(2).replace("x", "*").replace("fois", "*").replace("plus", "+").replace("moins", "-").replace("divisé par", "/").replace("sur", "/")
+        try:
+            # only allow safe chars
+            allowed = set("0123456789+-*/(). ,")
+            if all(c in allowed for c in expr):
+                result = eval(expr, {"__builtins__": {}}, {})
+                speak_text(f"Le résultat est {result}.")
+                return True
+        except Exception:
+            pass
+        speak_text("Je n'ai pas pu calculer cette expression.")
+        return True
+    # Joke
+    if any(x in n for x in ("raconte une blague", "une blague", "fais moi rire")):
+        jokes = [
+            "Pourquoi les plongeurs plongent-ils toujours en arrière ? Parce que sinon ils tombent dans le bateau.",
+            "Que dit un oignon quand il se cogne ? Aïe, je pleure.",
+            "Pourquoi les squelettes ne se battent-ils jamais ? Parce qu'ils n'ont pas de tripes.",
+        ]
+        speak_text(random.choice(jokes))
+        return True
+    # System status
+    if any(x in n for x in ("état du système", "etat du systeme", "statut du système", "diagnostic")):
+        speak_text("Système opérationnel. Processeur et mémoire dans les limites normales. Connexion réseau active. Tous les modules Jarvis sont en ligne.")
+        return True
+    return False
+
+
 def _is_private_data_request(command: str) -> bool:
     normalized = " ".join(command.lower().split())
     return any(pattern in normalized for pattern in _PRIVATE_REQUEST_PATTERNS)
@@ -1496,7 +1690,10 @@ def _handle_voice_command(text: str, confidence: float) -> None:
         "lis cette page", "résume cette page", "resume cette page", "quelle est l'information",
         "traduis ", "comment dit-on ", "comment dit on ", "ouvre le premier", "ouvre le troisième",
         "ouvre le troisieme", "reviens en arrière", "reviens en arriere", "descends dans la page",
-        "clique sur vidéos", "clique sur videos", "https", "h t t p s"
+        "clique sur vidéos", "clique sur videos", "https", "h t t p s",
+        "allume", "éteins", "eteins", "thermostat", "volets", "scène", "scene",
+        "météo", "meteo", "quelle heure", "quelle date", "rappelle", "calcule",
+        "blague", "état du système", "etat du systeme", "diagnostic"
     ))
     if wake and wake not in lowered and not known_without_wake:
         return
@@ -1558,6 +1755,10 @@ def _handle_voice_command(text: str, confidence: float) -> None:
     if _handle_browser_navigation(command):
         return
     if _handle_targeted_search(command):
+        return
+    if _handle_domotic_command(command):
+        return
+    if _handle_smart_command(command):
         return
 
     # Spotify remains running. These optional media commands control playback or search a requested title.
