@@ -5,3 +5,5 @@ Jarvis Voice v1.5.0 — STANDALONE EXE + ZOOM
 - Lancement de l'interface Jarvis dans un processus séparé même en mode gelé (multiprocessing.freeze_support).
 - Fonctionnalité de zoom sur l'interface HUD : molette de souris, touches + / -, touche 0 pour réinitialiser.
 - Zoom appliqué à l'ensemble de la scène (canvas.scale) avec indicateur en bas d'écran.
+
+- Interface HUD réécrite : noyau holographique animé (anneaux multiples, arcs indépendants, particules orbitales, balayage de scan), états visuels (veille/écoute/réflexion/exécution/réponse/erreur), panneaux système et micro, zoom conservé.
