@@ -45,9 +45,9 @@ Branche : `arena/d565c389-jarvis`
 - **Piste** : configurer `HOME_ASSISTANT_URL` et `HOME_ASSISTANT_TOKEN` sur le PC.
 
 ## 8. Agent agentique avancé
-- **Statut** : implémenté (planification + exécution + rapport).
-- **Limitation** : l'exécution des étapes utilise OpenRouter (pas d'accès web réel, pas d'outils système). Pas de mémoire persistante entre sessions.
-- **Piste** : ajouter des outils réels (recherche web, lecture de fichiers workspace, calcul) et une mémoire.
+- **Statut** : implémenté et amélioré.
+- **Ajouts** : outils réels (calcul, date/heure, recherche Google, rappel mémoire), mémoire persistante (`workspace/memory.json`), rappels persistants (`workspace/reminders.json`), commande d'aide.
+- **Limitation restante** : pas d'accès web réel au-delà de l'ouverture Google, pas de lecture de fichiers arbitraires (sécurité).
 
 ## 9. Icône / signature du `.exe`
 - **Statut** : non fait.

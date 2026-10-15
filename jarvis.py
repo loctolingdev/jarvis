@@ -124,7 +124,22 @@ JARVIS_OPENED_HWNDS: set[int] = set()
 SPEECH_LOCK = threading.Lock()
 LINK_MODE_EVENT = threading.Event()
 UI_STATE_FILE = _app_dir() / ".jarvis_ui_state.json"
-VOICE_PROFILE_FILE = _app_dir() / "voice_profile.wav"
+def _resolve_voice_profile() -> Path:
+    # In frozen mode the bundled file lives in _MEIPASS; copy it next to the
+    # exe on first run so the user can replace it.
+    bundled = _resource_dir() / "voice_profile.wav"
+    target = _app_dir() / "voice_profile.wav"
+    if not target.exists() and bundled.exists() and bundled != target:
+        try:
+            import shutil
+            shutil.copy2(bundled, target)
+        except Exception:
+            return bundled
+    if target.exists():
+        return target
+    return bundled
+
+VOICE_PROFILE_FILE = _resolve_voice_profile()
 VOICE_LOCK_ENABLED = (os.environ.get("VOICE_LOCK_ENABLED", "true").strip().lower() in {"1","true","yes","on"})
 VOICE_LOCK_THRESHOLD = float(os.environ.get("VOICE_LOCK_THRESHOLD", "0.24"))
 UI_PROCESS = None
@@ -1535,6 +1550,7 @@ def _handle_smart_command(command: str) -> bool:
             seconds = amount * 60
         elif unit.startswith("heure"):
             seconds = amount * 3600
+        _schedule_persistent_reminder(amount, unit, msg)
         def _fire():
             time.sleep(seconds)
             speak_text(f"Rappel : {msg}")
@@ -1568,6 +1584,34 @@ def _handle_smart_command(command: str) -> bool:
     # System status
     if any(x in n for x in ("état du système", "etat du systeme", "statut du système", "diagnostic")):
         speak_text("Système opérationnel. Processeur et mémoire dans les limites normales. Connexion réseau active. Tous les modules Jarvis sont en ligne.")
+        return True
+    # Help / capabilities
+    if any(x in n for x in ("aide", "que peux-tu faire", "que sais-tu faire", "tes commandes", "liste des commandes", "comment tu fonctionnes")):
+        speak_text("Je peux : contrôler la musique et le volume, ouvrir des sites et rechercher sur Google, gérer la domotique (lumières, thermostat, volets, scènes), donner la météo, l'heure et la date, faire des calculs, poser des rappels, raconter des blagues, lire et résumer des pages web, traduire, lancer un agent pour des tâches complexes, et gérer un espace de travail. Dites 'agent' suivi d'une tâche pour lancer l'agent.")
+        return True
+    # Domotic: temperature / humidity sensors
+    sensor_match = re.search(r"(temperature|température|humidite|humidité)\s+(?:du |de la |de l'|de )?(.+)", n)
+    if sensor_match and HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN:
+        kind = sensor_match.group(1)
+        room = sensor_match.group(2).strip()
+        entity = f"sensor.{room.replace(' ', '_')}_{kind.replace('é','e').replace('è','e')}"
+        status, data = _http_json("GET", f"{HOME_ASSISTANT_URL}/api/states/{entity}", headers={"Authorization": f"Bearer {HOME_ASSISTANT_TOKEN}"})
+        if status and 200 <= status < 300 and isinstance(data, dict):
+            val = data.get("state")
+            speak_text(f"{kind} dans {room} : {val}.")
+            return True
+        speak_text(f"Je n'ai pas pu lire le capteur {kind} de {room}.")
+        return True
+    # Domotic: all lights off / on
+    if any(x in n for x in ("eteins tout", "éteins tout", "tout eteindre", "tout éteindre", "coupe tout")):
+        if HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN:
+            _http_json("POST", f"{HOME_ASSISTANT_URL}/api/services/light/turn_off", {"entity_id": "all"}, {"Authorization": f"Bearer {HOME_ASSISTANT_TOKEN}"})
+        speak_text("J'ai tout éteint.")
+        return True
+    if any(x in n for x in ("allume tout", "tout allumer")):
+        if HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN:
+            _http_json("POST", f"{HOME_ASSISTANT_URL}/api/services/light/turn_on", {"entity_id": "all"}, {"Authorization": f"Bearer {HOME_ASSISTANT_TOKEN}"})
+        speak_text("J'ai tout allumé.")
         return True
     return False
 
@@ -1676,6 +1720,141 @@ def ask_openrouter(prompt: str) -> str:
 WORKSPACE_DIR = _app_dir() / "workspace"
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 
+AGENT_MEMORY_FILE = WORKSPACE_DIR / "memory.json"
+REMINDERS_FILE = WORKSPACE_DIR / "reminders.json"
+
+
+def _load_json(path: Path, default):
+    try:
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return default
+
+
+def _save_json(path: Path, data) -> None:
+    try:
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as exc:
+        log.warning("Could not save %s: %s", path, exc)
+
+
+def _agent_memory() -> list:
+    return _load_json(AGENT_MEMORY_FILE, [])
+
+
+def _remember_agent(task: str, summary: str) -> None:
+    mem = _agent_memory()
+    mem.append({"time": time.time(), "task": task, "summary": summary[:500]})
+    mem = mem[-50:]
+    _save_json(AGENT_MEMORY_FILE, mem)
+
+
+def _agent_tools(step: str, task: str) -> str | None:
+    """Real tools the agent can use. Returns a result string or None."""
+    low = step.lower()
+    # Calculator
+    m = re.search(r"calcule\s+(.+)", low)
+    if m or "calcul" in low:
+        expr = m.group(1) if m else ""
+        expr = expr.replace("x", "*").replace("fois", "*").replace("plus", "+").replace("moins", "-").replace("divise par", "/")
+        allowed = set("0123456789+-*/(). ,")
+        if expr and all(c in allowed for c in expr):
+            try:
+                return f"Resultat: {eval(expr, {'__builtins__': {}}, {})}"
+            except Exception:
+                pass
+    # Date / time
+    if any(k in low for k in ("heure", "date", "jour")):
+        import datetime
+        now = datetime.datetime.now()
+        return f"Date/heure actuelle: {now.strftime('%A %d %B %Y %H:%M')}"
+    # Open a Google search (real action)
+    if any(k in low for k in ("recherch", "cherche", "web", "google")):
+        try:
+            _open_google_search(task)
+            return "Recherche Google lancee dans Chrome."
+        except Exception as exc:
+            return f"Recherche non lancee ({exc})."
+    # Memory recall
+    if any(k in low for k in ("memoire", "souviens", "precedent")):
+        mem = _agent_memory()
+        if mem:
+            last = mem[-1]
+            return f"Derniere tache: {last['task']} -> {last['summary'][:200]}"
+        return "Aucune memoire precedente."
+    return None
+
+
+def _run_agent_task(task: str) -> None:
+    _ui_event("executing", command=f"Agent: {task}")
+    speak_text("D'accord, je lance l'agent sur cette tache. Je vous tiens informe.")
+    steps = _agent_plan(task)
+    results = []
+    for i, step in enumerate(steps, 1):
+        _ui_event("executing", detail=f"Etape {i}/{len(steps)}: {step[:60]}")
+        speak_text(f"Etape {i} sur {len(steps)} : {step}")
+        tool_res = _agent_tools(step, task)
+        if tool_res:
+            res = tool_res
+        else:
+            try:
+                res = _agent_execute_step(step, task)
+            except Exception as exc:
+                res = f"Etape non executee ({exc})."
+        results.append(f"## {step}\n{res}")
+        time.sleep(0.3)
+    report = f"# Rapport agent - {task}\n\n" + "\n\n".join(results)
+    out = WORKSPACE_DIR / ("agent_" + re.sub(r"[^a-z0-9]+", "_", task.lower())[:40] + ".md")
+    try:
+        out.write_text(report, encoding="utf-8")
+    except Exception as exc:
+        log.warning("Could not save agent report: %s", exc)
+    _remember_agent(task, "\n".join(r[:200] for r in results))
+    speak_text(f"Tache terminee. J'ai sauvegarde le rapport dans l'espace de travail sous {out.name}.")
+    _ui_event("speaking", detail=f"Rapport: {out.name}")
+
+
+# Persistent reminders
+def _load_reminders() -> list:
+    return _load_json(REMINDERS_FILE, [])
+
+
+def _save_reminders(data) -> None:
+    _save_json(REMINDERS_FILE, data)
+
+
+def _schedule_persistent_reminder(amount: int, unit: str, msg: str) -> None:
+    seconds = amount
+    if unit.startswith("minute"):
+        seconds = amount * 60
+    elif unit.startswith("heure"):
+        seconds = amount * 3600
+    reminders = _load_reminders()
+    reminders.append({"time": time.time() + seconds, "msg": msg, "fired": False})
+    _save_reminders(reminders)
+
+
+def _reminder_watcher() -> None:
+    while not PROGRAM_STOP_EVENT.is_set():
+        try:
+            reminders = _load_reminders()
+            now = time.time()
+            changed = False
+            for r in reminders:
+                if not r.get("fired") and now >= r.get("time", 0):
+                    speak_text(f"Rappel : {r.get('msg', 'Rappel Jarvis')}")
+                    r["fired"] = True
+                    changed = True
+            if changed:
+                _save_reminders(reminders)
+        except Exception:
+            pass
+        time.sleep(5)
+
+
+
 
 def _agent_plan(task: str) -> list[str]:
     prompt = (
@@ -1752,6 +1931,36 @@ def _handle_agent_command(command: str) -> bool:
         except Exception as exc:
             speak_text("Je n'ai pas pu lire l'espace de travail.")
         return True
+    # Memory commands
+    if any(x in n for x in ("souviens-toi", "souviens toi", "memorise", "mémorise", "retiens")):
+        # extract what to remember
+        msg = n
+        for t in ("souviens-toi de", "souviens toi de", "souviens-toi", "souviens toi", "memorise", "mémorise", "retiens"):
+            msg = msg.replace(t, "").strip()
+        if msg:
+            _remember_agent("memoire", msg)
+            speak_text(f"Je m'en souviendrai : {msg}.")
+        else:
+            speak_text("Que dois-je retenir ?")
+        return True
+    if any(x in n for x in ("qu'est-ce que tu te souviens", "que te souviens-tu", "ta memoire", "ton historique", "rappelle-toi")):
+        mem = _agent_memory()
+        if mem:
+            last = mem[-3:]
+            speak_text("Je me souviens de : " + " ; ".join(m["task"] + " -> " + m["summary"][:80] for m in last))
+        else:
+            speak_text("Je n'ai rien en memoire pour le moment.")
+        return True
+    # Persistent reminders list
+    if any(x in n for x in ("liste les rappels", "mes rappels", "rappels en cours")):
+        rems = _load_reminders()
+        pending = [r for r in rems if not r.get("fired")]
+        if pending:
+            speak_text(f"Vous avez {len(pending)} rappel(s) en attente.")
+        else:
+            speak_text("Aucun rappel en attente.")
+        return True
+
     triggers = ("agent ", "lance l'agent", "travaille sur", "prepare un rapport", "prepare un rapport",
                 "analyse et cree", "analyse et cree", "fais un rapport", "genere un rapport", "genere un rapport",
                 "agentique", "espace de travail")
@@ -1788,7 +1997,9 @@ def _handle_voice_command(text: str, confidence: float) -> None:
         "allume", "éteins", "eteins", "thermostat", "volets", "scène", "scene",
         "météo", "meteo", "quelle heure", "quelle date", "rappelle", "calcule",
         "blague", "état du système", "etat du systeme", "diagnostic",
-        "agent", "workspace", "espace de travail", "rapport", "travaille sur"
+        "agent", "workspace", "espace de travail", "rapport", "travaille sur",
+        "aide", "que peux-tu faire", "souviens", "memorise", "mémorise",
+        "rappels", "tout allumer", "tout eteindre", "tout éteindre"
     ))
     if wake and wake not in lowered and not known_without_wake:
         return
@@ -2551,6 +2762,7 @@ def open_cursor_window() -> None:
 
 
 def main() -> int:
+    threading.Thread(target=_reminder_watcher, daemon=True).start()
     _start_jarvis_ui()
     _minimize_console_window()
     _ui_event("waiting", detail="Frappez deux fois dans vos mains")

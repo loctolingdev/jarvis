@@ -1,6 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-import os
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
 block_cipher = None
 
@@ -13,6 +12,7 @@ a = Analysis(
         ('assets', 'assets'),
         ('voice_profile.wav', '.'),
         ('.env.example', '.'),
+        ('enroll_voice.py', '.'),
     ],
     hiddenimports=[
         'jarvis_ui',
@@ -21,10 +21,19 @@ a = Analysis(
         'pycaw',
         'pycaw.pycaw',
         'comtypes',
+        'comtypes.client',
         'PIL',
         'PIL.Image',
         'PIL.ImageTk',
-    ] + collect_submodules('sounddevice'),
+        'sounddevice',
+        'numpy',
+        'dotenv',
+        'websockets',
+        'pyautogui',
+        'pyperclip',
+    ] + collect_submodules('sounddevice')
+      + collect_submodules('comtypes')
+      + collect_submodules('speech_recognition'),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
