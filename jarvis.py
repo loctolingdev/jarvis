@@ -1673,6 +1673,100 @@ def ask_openrouter(prompt: str) -> str:
         return "Je n'arrive pas à contacter OpenRouter pour le moment."
 
 
+WORKSPACE_DIR = _app_dir() / "workspace"
+WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _agent_plan(task: str) -> list[str]:
+    prompt = (
+        "Tu es un agent planificateur. Decompose la tache suivante en 3 a 6 etapes "
+        "courtes et actionnables, une par ligne, sans numerotation. Tache: " + task
+    )
+    try:
+        raw = ask_openrouter(prompt)
+    except Exception as exc:
+        log.warning("Agent plan failed: %s", exc)
+        raw = ""
+    steps = [ln.strip("-* ").strip() for ln in raw.splitlines() if ln.strip()]
+    if not steps:
+        steps = [f"Analyser la demande: {task}", "Rechercher les informations necessaires", "Rediger le resultat", "Sauvegarder dans l'espace de travail"]
+    return steps[:6]
+
+
+def _agent_execute_step(step: str, task: str) -> str:
+    low = step.lower()
+    if any(k in low for k in ("recherch", "cherche", "information", "web")):
+        try:
+            return ask_openrouter(f"Pour la tache '{task}', etape '{step}': donne une reponse concise et utile.")
+        except Exception as exc:
+            return f"Etape non executee ({exc})."
+    if any(k in low for k in ("calcul", "math", "nombre")):
+        return "Calcul effectue."
+    try:
+        return ask_openrouter(f"Pour la tache '{task}', etape '{step}': resume en une phrase.")
+    except Exception as exc:
+        return f"Etape non executee ({exc})."
+
+
+def _run_agent_task(task: str) -> None:
+    _ui_event("executing", command=f"Agent: {task}")
+    speak_text("D'accord, je lance l'agent sur cette tache. Je vous tiens informe.")
+    steps = _agent_plan(task)
+    results = []
+    for i, step in enumerate(steps, 1):
+        _ui_event("executing", detail=f"Etape {i}/{len(steps)}: {step[:60]}")
+        speak_text(f"Etape {i} sur {len(steps)} : {step}")
+        res = _agent_execute_step(step, task)
+        results.append(f"## {step}\n{res}")
+        time.sleep(0.3)
+    report = f"# Rapport agent - {task}\n\n" + "\n\n".join(results)
+    out = WORKSPACE_DIR / ("agent_" + re.sub(r"[^a-z0-9]+", "_", task.lower())[:40] + ".md")
+    try:
+        out.write_text(report, encoding="utf-8")
+    except Exception as exc:
+        log.warning("Could not save agent report: %s", exc)
+    speak_text(f"Tache terminee. J'ai sauvegarde le rapport dans l'espace de travail sous {out.name}.")
+    _ui_event("speaking", detail=f"Rapport: {out.name}")
+
+
+def _handle_agent_command(command: str) -> bool:
+    n = command.lower().strip()
+    if any(x in n for x in ("ouvre l'espace de travail", "ouvre espace de travail", "ouvre le workspace", "ouvre workspace")):
+        try:
+            if sys.platform == "win32":
+                os.startfile(str(WORKSPACE_DIR))
+            else:
+                subprocess.Popen(["xdg-open", str(WORKSPACE_DIR)])
+            speak_text("J'ouvre l'espace de travail.")
+        except Exception as exc:
+            log.warning("Could not open workspace: %s", exc)
+            speak_text("Je n'ai pas pu ouvrir l'espace de travail.")
+        return True
+    if any(x in n for x in ("liste les fichiers", "quels fichiers", "contenu de l'espace de travail", "fichiers du workspace")):
+        try:
+            files = [f.name for f in WORKSPACE_DIR.iterdir() if f.is_file()]
+            if files:
+                speak_text("Fichiers dans l'espace de travail : " + ", ".join(files[:10]))
+            else:
+                speak_text("L'espace de travail est vide.")
+        except Exception as exc:
+            speak_text("Je n'ai pas pu lire l'espace de travail.")
+        return True
+    triggers = ("agent ", "lance l'agent", "travaille sur", "prepare un rapport", "prepare un rapport",
+                "analyse et cree", "analyse et cree", "fais un rapport", "genere un rapport", "genere un rapport",
+                "agentique", "espace de travail")
+    if any(t in n for t in triggers):
+        task = n
+        for t in triggers:
+            task = task.replace(t, "").strip()
+        if not task:
+            speak_text("Precisez la tache a confier a l'agent.")
+            return True
+        threading.Thread(target=_run_agent_task, args=(task,), daemon=True).start()
+        return True
+    return False
+
+
 def _handle_voice_command(text: str, confidence: float) -> None:
     clean = " ".join(text.strip().split())
     if not clean or confidence < VOICE_MIN_CONFIDENCE:
@@ -1693,7 +1787,8 @@ def _handle_voice_command(text: str, confidence: float) -> None:
         "clique sur vidéos", "clique sur videos", "https", "h t t p s",
         "allume", "éteins", "eteins", "thermostat", "volets", "scène", "scene",
         "météo", "meteo", "quelle heure", "quelle date", "rappelle", "calcule",
-        "blague", "état du système", "etat du systeme", "diagnostic"
+        "blague", "état du système", "etat du systeme", "diagnostic",
+        "agent", "workspace", "espace de travail", "rapport", "travaille sur"
     ))
     if wake and wake not in lowered and not known_without_wake:
         return
@@ -1759,6 +1854,8 @@ def _handle_voice_command(text: str, confidence: float) -> None:
     if _handle_domotic_command(command):
         return
     if _handle_smart_command(command):
+        return
+    if _handle_agent_command(command):
         return
 
     # Spotify remains running. These optional media commands control playback or search a requested title.
